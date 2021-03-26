@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
+
+import { axiosWithAuth } from '../components/axiosWithAuth';
 
 const initialColor = {
   color: "",
@@ -17,25 +18,87 @@ const ColorList = ({ colors, updateColors }) => {
 
   const saveEdit = e => {
     e.preventDefault();
+    axiosWithAuth()
+      .put(`http://localhost:5000/api/colors/${colorToEdit.id}`, colorToEdit)
+      .then(response => {
+        setEditing(false);
+        updateColors(
+          colors.map(color => {
+            return color.id === colorToEdit.id ? response.data : color;
+          })
+        );
+      })
+      .catch(error => console.error(error));
 
   };
 
   const deleteColor = color => {
+    axiosWithAuth()
+      .delete(`http://localhost:5000/api/colors/${color.id}`)
+      .then(response => {
+        updateColors(colors.filter(color => color.id !== response.data))
+      })
+      .catch(error => console.error(error))
   };
 
   return (
     <div className="colors-wrap">
       <p>colors</p>
       <ul>
-        {colors.map(color => <Color key={color.id} editing={editing} color={color} editColor={editColor} deleteColor={deleteColor}/>)}
+        {colors.map(color => (
+          <li key={color.color} onClick={() => editColor(color)} data-testid='color'>
+            <span>
+              <span className="delete" onClick={e => {
+                    e.stopPropagation();
+                    deleteColor(color)
+                  }
+                }>
+                  x
+              </span>{" "}
+              {color.color}
+            </span>
+            <div
+              className="color-box"
+              style={{ backgroundColor: color.code.hex }}
+            />
+          </li>
+        ))}
       </ul>
-      
-      { editing && <EditMenu colorToEdit={colorToEdit} saveEdit={saveEdit} setColorToEdit={setColorToEdit} setEditing={setEditing}/> }
-
+      {editing && (
+        <form onSubmit={saveEdit}>
+          <legend>edit color</legend>
+          <label>
+            color name:
+            <input
+              onChange={e =>
+                setColorToEdit({ ...colorToEdit, color: e.target.value })
+              }
+              value={colorToEdit.color}
+            />
+          </label>
+          <label>
+            hex code:
+            <input
+              onChange={e =>
+                setColorToEdit({
+                  ...colorToEdit,
+                  code: { hex: e.target.value }
+                })
+              }
+              value={colorToEdit.code.hex}
+            />
+          </label>
+          <div className="button-row">
+            <button type="submit">save</button>
+            <button onClick={() => setEditing(false)}>cancel</button>
+          </div>
+        </form>
+      )}
+      <div className="spacer" />
+      {/* stretch - build another form here to add a color */}
     </div>
   );
 };
-
 export default ColorList;
 
 //Task List:
